@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Securitate Criptografică — Hashing & P2P</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a0e;
+    --surface: #0c1520;
+    --surface2: #111d2b;
+    --border: #1a2f44;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7fff7f;
+    --text: #c8dde8;
+    --text-dim: #5a7a8a;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+    --glow2: 0 0 20px rgba(255,107,53,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Scanline effect */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.05) 2px,
+      rgba(0,0,0,0.05) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* HEADER */
+  header {
+    padding: 60px 0 40px;
+    text-align: center;
+    position: relative;
+  }
+
+  .header-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0.8;
+  }
+
+  h1 {
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 800;
+    line-height: 1.05;
+    background: linear-gradient(135deg, #ffffff 0%, var(--accent) 50%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+  }
+
+  .header-sub {
+    font-size: 1rem;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  /* NAV TABS */
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px;
+    margin: 40px 0 48px;
+    overflow-x: auto;
+  }
+
+  .nav-tab {
+    flex: 1;
+    min-width: 160px;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.25s ease;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .nav-tab:hover { color: var(--text); background: var(--surface2); }
+
+  .nav-tab.active {
+    background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,212,255,0.05));
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.3);
+    box-shadow: var(--glow);
+  }
+
+  .nav-tab.active[data-section="p2p"] {
+    background: linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.05));
+    color: var(--accent2);
+    border-color: rgba(255,107,53,0.3);
+    box-shadow: var(--glow2);
+  }
+
+  /* SECTIONS */
+  .section { display: none; animation: fadeIn 0.4s ease; }
+  .section.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+
+  .section-title span { color: var(--accent); }
+  .section-title.orange span { color: var(--accent2); }
+
+  .section-desc {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    margin-bottom: 36px;
+    line-height: 1.7;
+  }
+
+  /* CARD GRID */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .card:hover { border-color: rgba(0,212,255,0.4); transform: translateY(-3px); box-shadow: var(--glow); }
+  .card:hover::before { opacity: 1; }
+
+  .card.orange::before { background: linear-gradient(90deg, transparent, var(--accent2), transparent); }
+  .card.orange:hover { border-color: rgba(255,107,53,0.4); box-shadow: var(--glow2); }
+
+  .card.green::before { background: linear-gradient(90deg, transparent, var(--accent3), transparent); }
+  .card.green:hover { border-color: rgba(127,255,127,0.4); box-shadow: 0 0 20px rgba(127,255,127,0.3); }
+
+  .card-badge {
+    display: inline-block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+    background: rgba(0,212,255,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.2);
+  }
+
+  .card-badge.orange { background: rgba(255,107,53,0.1); color: var(--accent2); border-color: rgba(255,107,53,0.2); }
+  .card-badge.green { background: rgba(127,255,127,0.1); color: var(--accent3); border-color: rgba(127,255,127,0.2); }
+  .card-badge.red { background: rgba(255,80,80,0.1); color: #ff5050; border-color: rgba(255,80,80,0.2); }
+  .card-badge.yellow { background: rgba(255,220,0,0.1); color: #ffdc00; border-color: rgba(255,220,0,0.2); }
+
+  .card h3 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+
+  .card p {
+    font-size: 0.84rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+
+  .card-detail {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    line-height: 1.8;
+  }
+
+  .card-detail strong { color: var(--accent); }
+  .card.orange .card-detail strong { color: var(--accent2); }
+  .card.green .card-detail strong { color: var(--accent3); }
+
+  /* HASH VISUALIZER */
+  .demo-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+    margin-bottom: 36px;
+  }
+
+  .demo-box h3 {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--accent);
+    margin-bottom: 20px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .demo-box.orange h3 { color: var(--accent2); }
+
+  .input-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .demo-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .demo-input:focus { border-color: var(--accent); }
+
+  .demo-btn {
+    padding: 12px 24px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .demo-btn:hover { background: rgba(0,212,255,0.2); box-shadow: var(--glow); }
+  .demo-btn.orange { background: rgba(255,107,53,0.1); border-color: rgba(255,107,53,0.3); color: var(--accent2); }
+  .demo-btn.orange:hover { background: rgba(255,107,53,0.2); box-shadow: var(--glow2); }
+
+  .hash-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    min-height: 52px;
+  }
+
+  .hash-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .hash-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--accent3);
+    word-break: break-all;
+    line-height: 1.6;
+  }
+
+  .hash-outputs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  @media (max-width: 600px) {
+    .hash-outputs-grid { grid-template-columns: 1fr; }
+  }
+
+  /* TIMELINE for P2P handshake */
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+    margin: 20px 0;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px; top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--accent), var(--accent2), transparent);
+  }
+
+  .timeline-step {
+    position: relative;
+    margin-bottom: 28px;
+    animation: slideIn 0.4s ease both;
+  }
+
+  .timeline-step::before {
+    content: '';
+    position: absolute;
+    left: -26px;
+    top: 6px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .timeline-step.orange::before { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+  .timeline-step.green::before { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); }
+
+  .step-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+
+  .step-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+
+  .step-desc {
+    font-size: 0.83rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* COMPARISON TABLE */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+    margin-bottom: 36px;
+  }
+
+  .compare-table th {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .compare-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(26,47,68,0.5);
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--text-dim);
+    vertical-align: top;
+  }
+
+  .compare-table tr:hover td { background: rgba(0,212,255,0.03); }
+
+  .compare-table td:first-child { color: #fff; font-weight: 700; }
+
+  .status-safe { color: var(--accent3); }
+  .status-warn { color: #ffdc00; }
+  .status-bad  { color: #ff5050; }
+
+  @keyframes slideIn {
+    from { opacity:0; transform: translateX(-8px); }
+    to   { opacity:1; transform: translateX(0); }
+  }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 40px 0 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-tag">// Criptografie & Securitate</div>
+    <h1>Hashing & Securitate P2P</h1>
+    <div class="header-sub">Algoritmi · Protocoale · Schimb de Chei</div>
+  </header>
+
+  <nav class="nav-tabs">
+    <button class="nav-tab active" data-section="hashing-history" onclick="showSection('hashing-history', this)">Istoria Hashing-ului</button>
+    <button class="nav-tab" data-section="hashing-algos" onclick="showSection('hashing-algos', this)">Algoritmi Hash</button>
+    <button class="nav-tab" data-section="p2p" onclick="showSection('p2p', this)">Securitate P2P</button>
+    <button class="nav-tab" data-section="demo" onclick="showSection('demo', this)">Demo Live</button>
+  </nav>
+
+  <!-- SECTION 1: ISTORIA HASHING -->
+  <div id="hashing-history" class="section active">
+    <div class="section-title">Primele <span>Variații de Hashing</span></div>
+    <p class="section-desc">
+      Hashing-ul a evoluat din necesitatea de a verifica integritatea datelor și de a stoca parolele în mod sigur.<br>
+      Primele funcții hash erau simple și vulnerabile — astăzi sunt fundația criptografiei moderne.
+    </p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-badge red">DEPRECAT · 1953</div>
+        <h3>CRC (Cyclic Redundancy Check)</h3>
+        <p>Prima formă de verificare a integrității datelor. Nu este o funcție hash criptografică, ci un checksum folosit pentru detectarea erorilor de transmisie.</p>
+        <div class="card-detail">
+          <strong>Output:</strong> 16 sau 32 biți<br>
+          <strong>Scop:</strong> Detectare erori, nu securitate<br>
+          <strong>Vulnerabilitate:</strong> Ușor de manipulat deliberat<br>
+          <strong>Folosit azi:</strong> Rețele, stocare (nu criptografie)
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-badge red">DEPRECAT · 1991</div>
+        <h3>MD4 (Message Digest 4)</h3>
+        <p>Creat de Ron Rivest, a fost prima funcție hash criptografică populară. Rapid, dar cu coliziuni descoperite rapid de Dobbertin (1995).</p>
+        <div class="card-detail">
+          <strong>Output:</strong> 128 biți (32 hex chars)<br>
+          <strong>Runde:</strong> 3 runde de procesare<br>
+          <strong>Vulnerabilitate:</strong> Coliziuni în minute pe PC modern<br>
+          <strong>Descendenți:</strong> MD5, SHA-1, RIPEMD
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-badge red">DEPRECAT · 1992</div>
+        <h3>MD5 (Message Digest 5)</h3>
+        <p>Îmbunătățire a MD4, a dominat internetul timp de un deceniu. Folosit masiv pentru parole și verificare fișiere. Complet compromis din 2004.</p>
+        <div class="card-detail">
+          <strong>Output:</strong> 128 biți<br>
+          <strong>Runde:</strong> 4 runde × 16 operații<br>
+          <strong>Vulnerabilitate:</strong> Coliziuni în secunde (Flame malware 2012)<br>
+          <strong>NU folosi pentru:</strong> Parole, semnături digitale
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-badge yellow">SLAB · 1995</div>
+        <h3>SHA-0 & SHA-1</h3>
+        <p>Dezvoltat de NSA, SHA-1 a înlocuit MD5 pentru un deceniu. Coliziunile practice au fost demonstrate de Google (SHAttered, 2017) cu 9 quintilioane de operații.</p>
+        <div class="card-detail">
+          <strong>Output:</strong> 160 biți (40 hex chars)<br>
+          <strong>Runde:</strong> 80 runde de procesare<br>
+          <strong>Vulnerabilitate:</strong> Collision attack demonstrat 2017<br>
+          <strong>Retras:</strong> Certificate TLS din 2017
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-badge yellow">LIMITAT · 1992</div>
+        <h3>RIPEMD-160</h3>
+        <p>Creat în Europa ca alternativă la SHA. Folosit în Bitcoin și PGP. Nu a fost spart, dar are output mic față de standardele moderne.</p>
+        <div class="card-detail">
+          <strong>Output:</strong> 160 biți<br>
+          <strong>Design:</strong> Două pipeline-uri paralele<br>
+          <strong>Status:</strong> Sigur, dar lent și output mic<br>
+          <strong>Folosit în:</strong> Bitcoin (P2PKH addresses)
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-badge" style="background:rgba(255,220,0,0.1);color:#ffdc00;border-color:rgba(255,220,0,0.2);">CONTEXT · 1976</div>
+        <h3>DES & Hash-urile bazate pe cifruri</h3>
+        <p>Înainte de hash-uri dedicate, criptografii foloseau cifruri de bloc (DES) în moduri speciale pentru a construi funcții hash unidirecționale.</p>
+        <div class="card-detail">
+          <strong>Metodă:</strong> Construcția Matyas-Meyer-Oseas<br>
+          <strong>Problemă:</strong> Lent, cheie fixă<br>
+          <strong>Lecție:</strong> Hash-urile dedicate sunt mai eficiente<br>
+          <strong>Moștenire:</strong> Principii preluate în SHA-1
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-box">
+      <h3>// Evoluția securității hash</h3>
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Algoritm</th><th>An</th><th>Output</th><th>Status</th><th>Notă critică</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>CRC32</td><td>1953</td><td>32 bit</td><td><span class="status-bad">❌ Nesigur</span></td><td>Nu e criptografic</td></tr>
+          <tr><td>MD4</td><td>1991</td><td>128 bit</td><td><span class="status-bad">❌ Spart</span></td><td>Coliziuni 1995</td></tr>
+          <tr><td>MD5</td><td>1992</td><td>128 bit</td><td><span class="status-bad">❌ Compromis</span></td><td>Coliziuni în secunde</td></tr>
+          <tr><td>SHA-0</td><td>1993</td><td>160 bit</td><td><span class="status-bad">❌ Retras</span></td><td>Retras după 2 ani</td></tr>
+          <tr><td>SHA-1</td><td>1995</td><td>160 bit</td><td><span class="status-warn">⚠️ Deprecat</span></td><td>SHAttered 2017</td></tr>
+          <tr><td>RIPEMD-160</td><td>1996</td><td>160 bit</td><td><span class="status-warn">⚠️ Limitat</span></td><td>Output prea mic</td></tr>
+          <tr><td>SHA-256</td><td>2001</td><td>256 bit</td><td><span class="status-safe">✅ Sigur</span></td><td>Standard actual</td></tr>
+          <tr><td>SHA-3/Keccak</td><td>2015</td><td>224-512 bit</td><td><span class="status-safe">✅ Recomandat</span></td><td>Design complet nou</td></tr>
+          <tr><td>BLAKE3</td><td>2020</td><td>256+ bit</td><td><span class="status-safe">✅ Modern</span></td><td>Rapid + sigur</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SECTION 2: ALGORITMI HASH -->
+  <div id="hashing-algos" class="section">
+    <div class="section-title">Algoritmii de <span>Hashing</span></div>
+    <p class="section-desc">
+      O funcție hash criptografică transformă date de orice dimensiune într-un output de dimensiune fixă.<br>
+      Proprietăți cheie: unidirecționalitate, rezistență la coliziuni, efect avalanșă (1 bit diferit → output complet diferit).
+    </p>
+
+    <div class="card-grid">
+      <div class="card green">
+        <div class="card-badge green">STANDARD · SHA-2</div>
+        <h3>SHA-256 / SHA-512</h3>
+        <p>Familia SHA-2, creată de NSA în 2001. SHA-256 produce 256 biți prin 64 de runde de compresie. Fundament al Bitcoin și TLS 1.3.</p>
+        <div class="card-detail">
+          <strong>Structură:</strong> Merkle–Damgård construction<br>
+          <strong>Runde:</strong> 64 (SHA-256) / 80 (SHA-512)<br>
+          <strong>Avalanșă:</strong> ~50% biți schimbați<br>
+          <strong>Folosit în:</strong> Bitcoin, TLS, JWT, S/MIME
+        </div>
+      </div>
+
+      <div class="card green">
+        <div class="card-badge green">MODERN · SHA-3</div>
+        <h3>SHA-3 / Keccak</h3>
+        <p>Câștigătorul competiției NIST 2012. Singurul hash cu design Sponge Construction — complet diferit de SHA-2, imun la atacuri de extensie de lungime.</p>
+        <div class="card-detail">
+          <strong>Structură:</strong> Sponge (Absorb + Squeeze)<br>
+          <strong>State intern:</strong> 1600 biți<br>
+          <strong>Permutare:</strong> Keccak-f[1600], 24 runde<br>
+          <strong>Variante:</strong> SHA3-224/256/384/512
+        </div>
+      </div>
+
+      <div class="card green">
+        <div class="card-badge green">RAPID · BLAKE3</div>
+        <h3>BLAKE3</h3>
+        <p>Cel mai rapid hash criptografic securizat (2020). Paralelizabil, de 10× mai rapid decât SHA-256. Bazat pe ChaCha20 și Merkle tree intern.</p>
+        <div class="card-detail">
+          <strong>Throughput:</strong> ~10 GB/s pe CPU modern<br>
+          <strong>Paralelism:</strong> SIMD + multi-thread<br>
+          <strong>Output:</strong> 256 biți (extensibil)<br>
+          <strong>Folosit în:</strong> Rust std, ZFS, Bao
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-badge">PAROLE · BCRYPT</div>
+        <h3>bcrypt / scrypt / Argon2</h3>
+        <p>Hash-uri adaptative pentru parole. Intentionat lente și intensive în memorie pentru a bloca atacurile brute-force și dictionary attacks cu GPU.</p>
+        <div class="card-detail">
+          <strong>bcrypt:</strong> Cost factor configurabil (2^N)<br>
+          <strong>scrypt:</strong> N, r, p — memorie intensivă<br>
+          <strong>Argon2:</strong> Câștigător PHC 2015, recomandat acum<br>
+          <strong>Argon2id:</strong> Protecție side-channel + GPU
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-badge">AUTENTIFICARE · HMAC</div>
+        <h3>HMAC (Hash-based MAC)</h3>
+        <p>Combină o funcție hash cu o cheie secretă pentru autentificarea mesajelor. HMAC-SHA256 garantează atât integritatea cât și autenticitatea datelor.</p>
+        <div class="card-detail">
+          <strong>Formula:</strong> H(K⊕opad ‖ H(K⊕ipad ‖ m))<br>
+          <strong>Cheie:</strong> Orice lungime (recomandată ≥ 32B)<br>
+          <strong>Folosit în:</strong> JWT, OAuth 2.0, API keys<br>
+          <strong>Rezistă la:</strong> Length extension attacks
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-badge">STRUCTURI · MERKLE</div>
+        <h3>Merkle Tree Hashing</h3>
+        <p>Structură de hash-uri arborescente unde fiecare nod conține hash-ul copiilor săi. Permite verificarea eficientă a datelor mari (blockchain, Git, TLS).</p>
+        <div class="card-detail">
+          <strong>Rădăcină:</strong> Hash al întregului set de date<br>
+          <strong>Verificare:</strong> O(log n) — fără descărcare totală<br>
+          <strong>Folosit în:</strong> Bitcoin, Ethereum, Git, IPFS<br>
+          <strong>Proprietate:</strong> Orice modificare schimbă rădăcina
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-box">
+      <h3>// Cum funcționează efectul avalanșă</h3>
+      <p style="font-family:'Share Tech Mono',monospace;font-size:0.8rem;color:var(--text-dim);margin-bottom:16px;line-height:1.8;">
+        Schimbarea unui singur caracter în input produce un output complet diferit.<br>
+        SHA-256("parola") vs SHA-256("Parola") — zero biți comuni predictibili.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="hash-output">
+          <div class="hash-label">Input A</div>
+          <div class="hash-value" style="color:var(--accent);">parola</div>
+        </div>
+        <div class="hash-output">
+          <div class="hash-label">Input B (1 char diferit)</div>
+          <div class="hash-value" style="color:var(--accent2);">Parola</div>
+        </div>
+        <div class="hash-output">
+          <div class="hash-label">SHA-256(parola)</div>
+          <div class="hash-value">c1c224b03cd9bc7b6a86d77f5dace40191766c485cd55dc48caf9ac873335d6f</div>
+        </div>
+        <div class="hash-output">
+          <div class="hash-label">SHA-256(Parola)</div>
+          <div class="hash-value">ba7816bf8f01cfea414140de5dae2ec73b00361bbef0469df7a8f2c9a5b6aad4...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: P2P SECURITY -->
+  <div id="p2p" class="section">
+    <div class="section-title orange">Securitate <span>P2P</span></div>
+    <p class="section-desc">
+      Comunicația peer-to-peer ridică provocări unice: nu există server central de încredere.<br>
+      Handshake-ul TLS, schimbul de chei și criptarea de capăt-la-capăt sunt esențiale.
+    </p>
+
+    <!-- HANDSHAKE -->
+    <div class="demo-box orange">
+      <h3>// TLS 1.3 Handshake — Pas cu Pas</h3>
+      <div class="timeline">
+        <div class="timeline-step">
+          <div class="step-num">PASUL 01 · CLIENT</div>
+          <div class="step-title">ClientHello</div>
+          <div class="step-desc">
+            Clientul trimite: versiunea TLS suportată, lista de cipher suites (ex: TLS_AES_256_GCM_SHA384),
+            extensii (SNI, ALPN) și un număr aleator de 32 bytes (client_random).
+            De la TLS 1.3, clientul trimite și key_share (cheia publică Diffie-Hellman) direct.
+          </div>
+        </div>
+        <div class="timeline-step orange">
+          <div class="step-num">PASUL 02 · SERVER</div>
+          <div class="step-title">ServerHello + Certificate</div>
+          <div class="step-desc">
+            Serverul răspunde cu cipher suite ales, server_random și propria cheie publică DH (key_share).
+            Trimite certificatul digital (X.509) și o semnătură digitală pentru autentificare.
+            Calculează imediat master secret folosind ECDH.
+          </div>
+        </div>
+        <div class="timeline-step">
+          <div class="step-num">PASUL 03 · AMBII</div>
+          <div class="step-title">Key Derivation (HKDF)</div>
+          <div class="step-desc">
+            Ambele părți calculează independent același shared_secret prin ECDH.
+            Din acesta, HKDF (HMAC-based Key Derivation Function) derivă cheile de sesiune:
+            client_write_key, server_write_key, IV-uri pentru AES-GCM.
+          </div>
+        </div>
+        <div class="timeline-step green">
+          <div class="step-num">PASUL 04 · FINAL</div>
+          <div class="step-title">Finished + Date Criptate</div>
+          <div class="step-desc">
+            Ambele trimit un mesaj "Finished" autentificat cu HMAC pentru a confirma că handshake-ul
+            nu a fost manipulat. De acum toate datele sunt criptate cu AES-256-GCM sau ChaCha20-Poly1305.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KEY EXCHANGE -->
+    <div class="demo-box orange">
+      <h3>// Metode de Schimb al Cheii de Criptare</h3>
+      <div class="card-grid" style="margin-top:20px;">
+        <div class="card orange">
+          <div class="card-badge orange">CLASIC · DH</div>
+          <h3>Diffie-Hellman (DH)</h3>
+          <p>Primul protocol public de schimb de chei (1976). Alice și Bob ajung la același secret fără să îl transmită prin rețea. Baza tuturor protocoalelor moderne.</p>
+          <div class="card-detail">
+            <strong>Bază matematică:</strong> Problema logaritmului discret<br>
+            <strong>Formula:</strong> K = g^(ab) mod p<br>
+            <strong>Problemă:</strong> Fără Perfect Forward Secrecy dacă cheile sunt statice<br>
+            <strong>Vulnerabil la:</strong> MITM fără autentificare
+          </div>
+        </div>
+
+        <div class="card orange">
+          <div class="card-badge orange">MODERN · ECDH</div>
+          <h3>ECDH (Elliptic Curve DH)</h3>
+          <p>Versiunea pe curbe eliptice a Diffie-Hellman. Chei de 256 biți oferă securitate echivalentă cu RSA-3072, dar sunt mult mai rapide.</p>
+          <div class="card-detail">
+            <strong>Curbă standard:</strong> Curve25519 (X25519)<br>
+            <strong>Alternativă:</strong> P-256 (NIST), secp256k1 (Bitcoin)<br>
+            <strong>Folosit în:</strong> TLS 1.3, Signal, WhatsApp<br>
+            <strong>PFS:</strong> ✅ cu chei efemere (ECDHE)
+          </div>
+        </div>
+
+        <div class="card orange">
+          <div class="card-badge orange">ASIMETRIC · RSA</div>
+          <h3>RSA Key Exchange</h3>
+          <p>Clientul criptează premaster secret cu cheia publică a serverului. Simplu dar fără Perfect Forward Secrecy — compromiterea cheii private dezvăluie toate sesiunile trecute.</p>
+          <div class="card-detail">
+            <strong>Dimensiune cheie:</strong> 2048-4096 biți recomandat<br>
+            <strong>Problemă:</strong> NU are Perfect Forward Secrecy<br>
+            <strong>Status TLS:</strong> Eliminat din TLS 1.3<br>
+            <strong>Totuși util:</strong> Semnături digitale, certificate
+          </div>
+        </div>
+
+        <div class="card orange">
+          <div class="card-badge orange">VIITOR · PQC</div>
+          <h3>Post-Quantum Cryptography</h3>
+          <p>Calculatoarele cuantice pot sparge RSA și ECDH prin algoritmul Shor. NIST a standardizat ML-KEM (Kyber) și ML-DSA (Dilithium) în 2024.</p>
+          <div class="card-detail">
+            <strong>ML-KEM (Kyber):</strong> Key encapsulation<br>
+            <strong>ML-DSA (Dilithium):</strong> Semnături digitale<br>
+            <strong>Bază matematică:</strong> Lattice-based cryptography<br>
+            <strong>Hibrid:</strong> X25519 + Kyber (recomandat acum)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADDITIONAL METHODS -->
+    <div class="demo-box orange">
+      <h3>// Metode Adiționale de Securizare P2P</h3>
+      <div class="card-grid" style="margin-top:20px;">
+        <div class="card">
+          <div class="card-badge">IDENTITATE · PKI</div>
+          <h3>Certificate & PKI</h3>
+          <p>Infrastructura de chei publice (PKI) cu Certificate Authorities (CA) rezolvă problema autentificării în P2P. Web of Trust (PGP) este alternativa descentralizată.</p>
+          <div class="card-detail">
+            <strong>X.509:</strong> Standard certificate TLS<br>
+            <strong>CT Logs:</strong> Certificate Transparency — auditabil public<br>
+            <strong>DANE:</strong> DNS-based Authentication (no CA needed)<br>
+            <strong>P2P alternativ:</strong> PGP Web of Trust
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-badge">MESAGERIE · E2E</div>
+          <h3>Signal Protocol (Double Ratchet)</h3>
+          <p>Protocolul folosit de Signal, WhatsApp, Messenger. Combină X3DH pentru schimb inițial cu Double Ratchet Algorithm pentru Perfect Forward Secrecy la fiecare mesaj.</p>
+          <div class="card-detail">
+            <strong>X3DH:</strong> Extended Triple DH — schimb inițial<br>
+            <strong>Double Ratchet:</strong> Cheie nouă la fiecare mesaj<br>
+            <strong>Proprietăți:</strong> PFS + Break-in Recovery<br>
+            <strong>Open source:</strong> ✅ Auditat public
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-badge">INTEGRITATE · PINNING</div>
+          <h3>Certificate / Key Pinning</h3>
+          <p>Aplicația memorează (pinuiește) cheia publică sau certificatul expected. Orice CA compromis nu poate emite certificate false pentru domeniu. Apără MITM attacks.</p>
+          <div class="card-detail">
+            <strong>HTTP Public Key Pinning:</strong> Deprecat (risc lockout)<br>
+            <strong>Alternativă:</strong> Expect-CT header + CT Logs<br>
+            <strong>Mobile:</strong> Pinning în codul aplicației<br>
+            <strong>HSTS Preloading:</strong> HTTPS forțat în browsere
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-badge green">MODERN · NOISE</div>
+          <h3>Noise Protocol Framework</h3>
+          <p>Framework folosit de WireGuard, Lightning Network, WhatsApp transport. Definește modele de handshake criptografic clar și auditabil, fără complexitatea TLS.</p>
+          <div class="card-detail">
+            <strong>WireGuard:</strong> Noise_IKpsk2 pattern<br>
+            <strong>Proprietăți:</strong> Mutual auth, PFS, Identity hiding<br>
+            <strong>Avantaj:</strong> Suprafață mică de atac<br>
+            <strong>Primitiv:</strong> Curve25519 + ChaCha20 + BLAKE2
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-badge">SESIUNE · SESSION KEYS</div>
+          <h3>Chei de Sesiune Efemere</h3>
+          <p>Fiecare sesiune P2P generează chei noi, care sunt șterse după terminare. Chiar dacă un atacator înregistrează traficul acum, nu-l poate decripta mai târziu.</p>
+          <div class="card-detail">
+            <strong>Perfect Forward Secrecy:</strong> Cheie nouă / sesiune<br>
+            <strong>Generare:</strong> CSPRNG (ChaCha20, /dev/urandom)<br>
+            <strong>Durata de viată:</strong> Sesiune sau interval scurt<br>
+            <strong>Ștergere sigură:</strong> Zeroize în memorie
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-badge">AUTENTIF. · MUTUAL TLS</div>
+          <h3>mTLS (Mutual TLS)</h3>
+          <p>Ambele părți prezintă certificate — nu doar serverul. Esențial în arhitecturi zero-trust, microservicii și rețele P2P unde ambii peers trebuie autentificați.</p>
+          <div class="card-detail">
+            <strong>Standard TLS:</strong> Doar serverul are certificat<br>
+            <strong>mTLS:</strong> Client + Server — autentificare reciprocă<br>
+            <strong>Folosit în:</strong> Kubernetes, Istio service mesh, P2P<br>
+            <strong>Avantaj:</strong> Zero implicit trust, fără parole
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: DEMO LIVE -->
+  <div id="demo" class="section">
+    <div class="section-title">Demo <span>Live</span></div>
+    <p class="section-desc">
+      Explorează hash-urile în browser. Calculele se fac local folosind Web Crypto API.<br>
+      Introdu orice text și observă cum funcționează efectul avalanșă.
+    </p>
+
+    <div class="demo-box">
+      <h3>// Calculator Hash — Web Crypto API</h3>
+      <div class="input-row">
+        <input class="demo-input" id="hashInput" type="text" placeholder="Introdu text pentru hashing..." value="Securitate P2P 2024">
+        <button class="demo-btn" onclick="computeHashes()">CALCULEAZĂ</button>
+      </div>
+      <div class="hash-outputs-grid">
+        <div class="hash-output">
+          <div class="hash-label">SHA-1 (128 biți) — DEPRECAT</div>
+          <div class="hash-value" id="sha1Out" style="color:#ff5050;">—</div>
+        </div>
+        <div class="hash-output">
+          <div class="hash-label">SHA-256 (256 biți) — STANDARD</div>
+          <div class="hash-value" id="sha256Out">—</div>
+        </div>
+        <div class="hash-output">
+          <div class="hash-label">SHA-384 (384 biți)</div>
+          <div class="hash-value" id="sha384Out">—</div>
+        </div>
+        <div class="hash-output">
+          <div class="hash-label">SHA-512 (512 biți) — PUTERNIC</div>
+          <div class="hash-value" id="sha512Out">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-box orange">
+      <h3>// Demonstrație Efect Avalanșă</h3>
+      <p style="font-family:'Share Tech Mono',monospace;font-size:0.8rem;color:var(--text-dim);margin-bottom:16px;line-height:1.8;">
+        Compară SHA-256 pentru două texte aproape identice. Observă cât de diferiți sunt hash-urile.
+      </p>
+      <div class="input-row">
+        <input class="demo-input" id="ava1" type="text" placeholder="Text 1..." value="parola">
+        <input class="demo-input" id="ava2" type="text" placeholder="Text 2 (1 char diferit)..." value="Parola">
+        <button class="demo-btn orange" onclick="avalanche()">COMPARĂ</button>
+      </div>
+      <div class="hash-outputs-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="hash-output">
+          <div class="hash-label">SHA-256 (Text 1)</div>
+          <div class="hash-value" id="ava1Out" style="color:var(--accent);">—</div>
+        </div>
+        <div class="hash-output">
+          <div class="hash-label">SHA-256 (Text 2)</div>
+          <div class="hash-value" id="ava2Out" style="color:var(--accent2);">—</div>
+        </div>
+        <div class="hash-output">
+          <div class="hash-label">Biți diferiți (din 256)</div>
+          <div class="hash-value" id="avaDiffOut" style="color:var(--accent3);font-size:1.1rem;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-box">
+      <h3>// Simulare ECDH Key Exchange</h3>
+      <p style="font-family:'Share Tech Mono',monospace;font-size:0.8rem;color:var(--text-dim);margin-bottom:16px;line-height:1.8;">
+        Generează o pereche de chei ECDH (P-256) și simulează un schimb de chei între Alice și Bob.
+      </p>
+      <button class="demo-btn" onclick="simulateECDH()" id="ecdhBtn">GENEREAZĂ CHEI ECDH</button>
+      <div id="ecdhOut" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div>// SECURITATE CRIPTOGRAFICĂ — Hashing & P2P Protocols</div>
+  <div style="margin-top:8px;font-size:0.7rem;">SHA-256 · SHA-3 · ECDH · TLS 1.3 · Signal Protocol · Noise Framework</div>
+</footer>
+
+<script>
+  function showSection(id, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  async function sha(algo, text) {
+    const enc = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest(algo, enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function computeHashes() {
+    const t = document.getElementById('hashInput').value || '';
+    document.getElementById('sha1Out').textContent   = await sha('SHA-1',   t);
+    document.getElementById('sha256Out').textContent = await sha('SHA-256', t);
+    document.getElementById('sha384Out').textContent = await sha('SHA-384', t);
+    document.getElementById('sha512Out').textContent = await sha('SHA-512', t);
+  }
+
+  async function avalanche() {
+    const t1 = document.getElementById('ava1').value || '';
+    const t2 = document.getElementById('ava2').value || '';
+    const h1 = await sha('SHA-256', t1);
+    const h2 = await sha('SHA-256', t2);
+    document.getElementById('ava1Out').textContent = h1;
+    document.getElementById('ava2Out').textContent = h2;
+
+    // Count different bits
+    let diff = 0;
+    for (let i = 0; i < h1.length && i < h2.length; i += 2) {
+      const b1 = parseInt(h1.substr(i,2), 16);
+      const b2 = parseInt(h2.substr(i,2), 16);
+      const xor = b1 ^ b2;
+      for (let b = 0; b < 8; b++) diff += (xor >> b) & 1;
+    }
+    const pct = ((diff / 256) * 100).toFixed(1);
+    document.getElementById('avaDiffOut').textContent = `${diff} biți (${pct}%)`;
+  }
+
+  async function simulateECDH() {
+    const btn = document.getElementById('ecdhBtn');
+    btn.textContent = 'SE GENEREAZĂ...';
+    btn.disabled = true;
+    const out = document.getElementById('ecdhOut');
+    out.innerHTML = '';
+
+    try {
+      const aliceKP = await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'}, true, ['deriveKey','deriveBits']);
+      const bobKP   = await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'}, true, ['deriveKey','deriveBits']);
+
+      const alicePub = await crypto.subtle.exportKey('jwk', aliceKP.publicKey);
+      const bobPub   = await crypto.subtle.exportKey('jwk', bobKP.publicKey);
+
+      const aliceShared = await crypto.subtle.deriveBits({name:'ECDH',public:bobKP.publicKey},   aliceKP.privateKey, 256);
+      const bobShared   = await crypto.subtle.deriveBits({name:'ECDH',public:aliceKP.publicKey}, bobKP.privateKey,   256);
+
+      const aHex = Array.from(new Uint8Array(aliceShared)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      const bHex = Array.from(new Uint8Array(bobShared)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      const match = aHex === bHex;
+
+      out.innerHTML = `
+        <div class="hash-outputs-grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:0;">
+          <div class="hash-output">
+            <div class="hash-label">Cheia Publică Alice (P-256 x)</div>
+            <div class="hash-value" style="color:var(--accent);">${alicePub.x}</div>
+          </div>
+          <div class="hash-output">
+            <div class="hash-label">Cheia Publică Bob (P-256 x)</div>
+            <div class="hash-value" style="color:var(--accent2);">${bobPub.x}</div>
+          </div>
+          <div class="hash-output">
+            <div class="hash-label">Shared Secret (Alice derivat)</div>
+            <div class="hash-value" style="color:var(--accent3);">${aHex}</div>
+          </div>
+          <div class="hash-output">
+            <div class="hash-label">Shared Secret (Bob derivat)</div>
+            <div class="hash-value" style="color:var(--accent3);">${bHex}</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding:12px 16px;background:${match?'rgba(127,255,127,0.07)':'rgba(255,80,80,0.07)'};border:1px solid ${match?'rgba(127,255,127,0.2)':'rgba(255,80,80,0.2)'};border-radius:8px;font-family:'Share Tech Mono',monospace;font-size:0.82rem;color:${match?'var(--accent3)':'#ff5050'};">
+          ${match ? '✅ SUCCES — Ambii peers au derivat același shared secret fără să îl transmită!' : '❌ EROARE — Shared secrets diferite!'}
+        </div>
+      `;
+    } catch(e) {
+      out.innerHTML = `<div style="color:#ff5050;font-family:'Share Tech Mono',monospace;font-size:0.82rem;">Eroare: ${e.message}</div>`;
+    }
+    btn.textContent = 'GENEREAZĂ DIN NOU';
+    btn.disabled = false;
+  }
+
+  // Auto-compute on load
+  computeHashes();
+</script>
+</body>
+</html>
